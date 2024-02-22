@@ -416,7 +416,7 @@ def get_and_save_data(code):
         data['importers'] = importer_data
         for element in importer_data:
             print(element)
-            importer = Importers(code=str(code),name=element,codification_id=codification_id)
+            importer = Importers(name=element,codification_id=codification_id)
             db.session.add(importer)
             db.session.commit()
 

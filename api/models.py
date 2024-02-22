@@ -1,4 +1,4 @@
-from adil_api import db
+from api.connection import db
 
 class codification(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,11 +1,9 @@
-from flask import Flask, request, jsonify
-from api.functions import views_app
-from flask_sqlalchemy import SQLAlchemy
+from api import create_app
 
-app = Flask(__name__)
-app.config.from_object('config.config')
-db = SQLAlchemy(app)
-app.register_blueprint(views_app)
+app = create_app()
+app.app_context().push()
+
+
 
 
 if __name__ == '__main__':

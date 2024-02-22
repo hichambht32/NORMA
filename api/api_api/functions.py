@@ -1,13 +1,9 @@
-from flask import request, jsonify,Blueprint
+from flask import jsonify
 from bs4 import BeautifulSoup
 from api.session import session
 import re 
-
-
-
-
-
-views_app = Blueprint('views_app', __name__)
+from api.models import Importers
+from api.api_api import views_app
 
 def get_importers(code):
 
@@ -396,7 +392,7 @@ def adil_tableaux(n, code):
         print(f"Request failed for URL: {url}")
         raise Exception("Failed to retrieve the webpage")
 
-@views_app.route('/get_data/<code>', methods=['GET'])
+@views_app.route('/get_data/<code>',methods=['GET'])
 def get_and_save_data(code):
     n_page_names = {
         "5": "Historique Droit d'Importation",
@@ -416,69 +412,70 @@ def get_and_save_data(code):
     try:
         importer_data = get_importers(code)
         data['importers'] = importer_data
-
+        for element in importer_data:
+            print(element)
     except Exception as e:
         print(f"Error getting importer data for code {code}: {e}")
         data['importers'] = {"error": f"Failed to get importer data for code {code}"}
-    print("1")
     # Exporters
-    try:
-        exporter_data = get_exporters(code)
-        data['exporters'] = exporter_data
-    except Exception as e:
-        print(f"Error getting exporter data for code {code}: {e}")
-        data['exporters'] = {"error": f"Failed to get exporter data for code {code}"}
-    print("2")
-    # Classification Commerciale
-    try:
-        classification_commerciale_n_data = get_classification_commerciale('n', code)
-        data['classification_commerciale_n'] = classification_commerciale_n_data
-    except Exception as e:
-        print(f"Error getting classification commerciale (n) data for code {code}: {e}")
-        data['classification_commerciale_n'] = {"error": f"Failed to get classification commerciale (n) data for code {code}"}
-    print("3")
-    try:
-        classification_commerciale_i_data = get_classification_commerciale('i', code)
-        data['classification_commerciale_i'] = classification_commerciale_i_data
-    except Exception as e:
-        print(f"Error getting classification commerciale (i) data for code {code}: {e}")
-        data['classification_commerciale_i'] = {"error": f"Failed to get classification commerciale (i) data for code {code}"}
-    print("4")
-    # Accord Convention
-    try:
-        accord_convention_data = get_accord_convention(code)
-        data['accord_convention'] = accord_convention_data
-    except Exception as e:
-        print(f"Error getting accord convention data for code {code}: {e}")
-        data['accord_convention'] = {"error": f"Failed to get accord convention data for code {code}"}
-    print("5")
-    # Documents Required
-    try:
-        documents_required_data = documents_required(code)
-        data['documents_required'] = documents_required_data
-    except Exception as e:
-        print(f"Error getting documents required data for code {code}: {e}")
-        data['documents_required'] = {"error": f"Failed to get documents required data for code {code}"}
-    print("6")
-    # Import Duties
-    try:
-        import_duties_data = import_duties(code)
-        data['import_duties'] = import_duties_data
-    except Exception as e:
-        print(f"Error getting import duties data for code {code}: {e}")
-        data['import_duties'] = {"error": f"Failed to get import duties data for code {code}"}
-    print("7")
-    # Adil Tableaux
-    adil_tableaux_data = {}
-    for n_value in n_page_names:
-        try:
-            adil_tableaux_data[n_page_names[n_value]] = adil_tableaux(n_value, code)
-        except Exception as e:
-            print(f"Error getting adil tableaux data for code {code}, n={n_value}: {e}")
-            adil_tableaux_data[n_page_names[n_value]] = {"error": f"Failed to get adil tableaux data for code {code}, n={n_value}"}
-    print("8")
-    data['adil_tableaux'] = adil_tableaux_data
-    print(data)
+    # try:
+    #     exporter_data = get_exporters(code)
+    #     data['exporters'] = exporter_data
+    # except Exception as e:
+    #     print(f"Error getting exporter data for code {code}: {e}")
+    #     data['exporters'] = {"error": f"Failed to get exporter data for code {code}"}
+    
+    # # Classification Commerciale
+    # try:
+    #     classification_commerciale_n_data = get_classification_commerciale('n', code)
+    #     data['classification_commerciale_n'] = classification_commerciale_n_data
+    # except Exception as e:
+    #     print(f"Error getting classification commerciale (n) data for code {code}: {e}")
+    #     data['classification_commerciale_n'] = {"error": f"Failed to get classification commerciale (n) data for code {code}"}
+    
+    # try:
+    #     classification_commerciale_i_data = get_classification_commerciale('i', code)
+    #     data['classification_commerciale_i'] = classification_commerciale_i_data
+    # except Exception as e:
+    #     print(f"Error getting classification commerciale (i) data for code {code}: {e}")
+    #     data['classification_commerciale_i'] = {"error": f"Failed to get classification commerciale (i) data for code {code}"}
+    
+    # # Accord Convention
+    # try:
+    #     accord_convention_data = get_accord_convention(code)
+    #     data['accord_convention'] = accord_convention_data
+    # except Exception as e:
+    #     print(f"Error getting accord convention data for code {code}: {e}")
+    #     data['accord_convention'] = {"error": f"Failed to get accord convention data for code {code}"}
+    
+    # # Documents Required
+    # try:
+    #     documents_required_data = documents_required(code)
+    #     data['documents_required'] = documents_required_data
+    # except Exception as e:
+    #     print(f"Error getting documents required data for code {code}: {e}")
+    #     data['documents_required'] = {"error": f"Failed to get documents required data for code {code}"}
+    
+    # # Import Duties
+    # try:
+    #     import_duties_data = import_duties(code)
+    #     data['import_duties'] = import_duties_data
+    # except Exception as e:
+    #     print(f"Error getting import duties data for code {code}: {e}")
+    #     data['import_duties'] = {"error": f"Failed to get import duties data for code {code}"}
+    
+    # # Adil Tableaux
+    # adil_tableaux_data = {}
+    # for n_value in n_page_names:
+    #     try:
+    #         adil_tableaux_data[n_page_names[n_value]] = adil_tableaux(n_value, code)
+    #     except Exception as e:
+    #         print(f"Error getting adil tableaux data for code {code}, n={n_value}: {e}")
+    #         adil_tableaux_data[n_page_names[n_value]] = {"error": f"Failed to get adil tableaux data for code {code}, n={n_value}"}
+    
+    # data['adil_tableaux'] = adil_tableaux_data
+    
+    # print(data['importers'])
     return ("all good")
 
 

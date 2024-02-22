@@ -2,8 +2,9 @@ from flask import jsonify
 from bs4 import BeautifulSoup
 from api.session import session
 import re 
-from api.models import Importers
+from api.models import Importers,codification
 from api.api_api import views_app
+from api.connection import db
 
 def get_importers(code):
 
@@ -405,7 +406,8 @@ def get_and_save_data(code):
         "15": "fournisseurs_valeur",
         "16": "clients_valeur"
     }
-
+    
+    codification_id = codification.query.filter_by(code=code).first().id
     data = {}
     
     # Importers
@@ -414,6 +416,10 @@ def get_and_save_data(code):
         data['importers'] = importer_data
         for element in importer_data:
             print(element)
+            importer = Importers(code=str(code),name=element,codification_id=codification_id)
+            db.session.add(importer)
+            db.session.commit()
+
     except Exception as e:
         print(f"Error getting importer data for code {code}: {e}")
         data['importers'] = {"error": f"Failed to get importer data for code {code}"}

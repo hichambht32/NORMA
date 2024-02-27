@@ -2,9 +2,12 @@ from flask import jsonify
 from bs4 import BeautifulSoup
 from api.session import session
 import re 
-from api.models import Importers,codification
+from api.models import AnnualExport, AnnualImport, Clients, DocumentRequired, Fournisseurs, ImportDuty, Importers,codification,Exporters,AccordConvention
 from api.api_api import views_app
 from api.connection import db
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 def get_importers(code):
 
@@ -44,24 +47,27 @@ def get_importers(code):
 def get_exporters(code):
     print(f"Fetching exporters for code: {code}")
     url = f"https://www.douane.gov.ma/adil/oper_EE.asp?pos={code}"
-    
+    print(url)
     # Set headers to mimic a browser request
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
     }
-    
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
     # Send a GET request to the URL
     response = session.get(url, headers=headers)
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
-        print(f"Request successful for code: {code}")
         # Parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Find all table rows (tr) containing importer names
         exporter_rows = soup.find_all('span', class_='Style7')
-        
+        print(exporter_rows)
         # Extract the importer names
         exporter_names = [row.get_text(strip=True) for row in exporter_rows]
 
@@ -69,6 +75,7 @@ def get_exporters(code):
         if attention(soup):
             raise Exception("No exporters found as of date")
         else:
+            print(exporter_names)
             return exporter_names
             
     else:
@@ -173,7 +180,7 @@ def get_accord_convention(code):
         table = soup.find('table', width="52%")
 
         # Initialize data dictionary
-        data = {}
+        data = []
 
         # Extract data from the table
         rows = table.find_all('tr')[2:-1]  # Exclude first two rows
@@ -195,19 +202,12 @@ def get_accord_convention(code):
                     tpi_percentage = cols[4].text.strip()
                     current_country = country_name
 
-                if current_country in data:
-                    data[current_country].append({
-                        "Agreement": agreement_type,
-                        "DI Percentage": di_percentage,
-                        "TPI Percentage": tpi_percentage
-                    })
-                else:
-                    data[current_country] = [{
-                        "Agreement": agreement_type,
-                        "DI Percentage": di_percentage,
-                        "TPI Percentage": tpi_percentage
-                    }]
-        print(f"Data extracted: {data}")
+                data.append({
+                    "Agreement": agreement_type,
+                    "DI Percentage": di_percentage,
+                    "TPI Percentage": tpi_percentage,
+                    "country": current_country
+                })
         return data
     else:
         print(f"Request failed for code: {code}")
@@ -219,14 +219,21 @@ def documents_required(code):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
     }
-
+    print(f"sending request for doc required for:{code}")
     # Send a GET request to the URL
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
     response = session.get(url, headers=headers)
-
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
         # Parse the HTML content
         soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Debug statement 2: Print the soup content
+        
 
         # Find the table containing the data
         table = soup.find('table', width="60%")
@@ -249,7 +256,7 @@ def documents_required(code):
                         documents.append({
                             "Document Number": document_number,
                             "Document Name": document_name,
-                            "Libelle d'Extrait": libelle_d_extrait,
+                            "libelle_d_extrait": libelle_d_extrait,
                             "Issuer": issuer
                         })
             else:  # If there are no rows, extract the message
@@ -258,19 +265,21 @@ def documents_required(code):
         else:  # If no table is found
             documents.append({"error": "No table found on the page."})
 
-
-        # Return the scraped data
         return documents
     else:
         raise Exception("Failed to retrieve the webpage")
-
+    
 def import_duties(code):
     # URL of the ADiL page
     url = f"https://www.douane.gov.ma/adil/info_2.asp?pos={code}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
     }
-
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
     # Send a GET request to the URL
     response = session.get(url, headers=headers)
 
@@ -291,28 +300,26 @@ def import_duties(code):
         for row in rows:
             cols = row.find_all('td')
             if len(cols) == 1:  # Check if the row has only one column
-                
+
                 # Extract the text content of the column
                 content = cols[0].text.strip()
-                
                 # Extract the key and value from the content
                 lines = content.splitlines()
 
                 # Process each line separately
-                for line in lines:
-                    # Split the line by ':' and '\n'
-                    key, *value = re.split(r'[:\n]', line, maxsplit=1)
+                for idx, line in enumerate(lines):
+                    # Split the line by ':' and take the first part as the key and the second part as the value
+                    parts = re.split(r':\s*', line, maxsplit=1)
+                    key = parts[0].strip()
+                    value = parts[1].strip() if len(parts) > 1 else ''
 
-                    # Remove leading and trailing whitespaces from the key and value
-                    key = key.strip()
-
-                    # Join the value parts with a space and remove leading and trailing whitespaces
-                    value = ' '.join(value).strip()
+                    # Check if the value is empty and the next line contains a value
+                    if not value and idx+1 < len(lines):
+                        value = lines[idx+1].strip()
 
                     # Store the key-value pair in the data dictionary
                     data[key] = value
 
-        print(f"Data extracted: {data}")
         return data
     else:
         print(f"Request failed for code: {code}")
@@ -346,23 +353,25 @@ def adil_tableaux(n, code):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
     }
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
     response = session.get(url, headers=headers)
 
     if response.status_code == 200:
-        print(f"Request successful for URL: {url}")
         soup = BeautifulSoup(response.text, 'html.parser') #lxml
 
         # Check if the alternative message exists
         alternative_message_div = soup.find('div', class_='Style100')
         if alternative_message_div:
-            print(f"Alternative message found: {alternative_message_div.get_text(strip=True)}")
             return jsonify({"page_name": page_name, "message": alternative_message_div.get_text(strip=True)})
         
         # Find the correct table based on its surrounding elements or content
         correct_table = soup.find('table', bordercolor='#111111')
 
         if correct_table:
-            print(f"Table found for URL: {url}")
             # Initialize an empty dictionary to store the data
             data_dict = {}
 
@@ -387,7 +396,6 @@ def adil_tableaux(n, code):
             # Return the constructed dictionary directly under page_name
             return data_dict
         else:
-            print(f"No table found for URL: {url}")
             raise Exception("No data available for the specified position")
     else:
         print(f"Request failed for URL: {url}")
@@ -396,7 +404,6 @@ def adil_tableaux(n, code):
 @views_app.route('/get_data/<code>',methods=['GET'])
 def get_and_save_data(code):
     n_page_names = {
-        "5": "Historique Droit d'Importation",
         "8": "importation1",
         "9": "exportation1",
         "10": "fournisseurs_poids",
@@ -409,80 +416,170 @@ def get_and_save_data(code):
     
     codification_id = codification.query.filter_by(code=code).first().id
     data = {}
-    
-    # Importers
-    try:
-        importer_data = get_importers(code)
-        data['importers'] = importer_data
-        for element in importer_data:
-            print(element)
-            importer = Importers(name=element,codification_id=codification_id)
-            db.session.add(importer)
-            db.session.commit()
 
-    except Exception as e:
-        print(f"Error getting importer data for code {code}: {e}")
-        data['importers'] = {"error": f"Failed to get importer data for code {code}"}
-    # Exporters
+    # Importers
     # try:
-    #     exporter_data = get_exporters(code)
-    #     data['exporters'] = exporter_data
+    #     importer_data = get_importers(code)
+    #     for element in importer_data:
+    #         existing_importer = Importers.query.filter_by(name=element, codification_id=codification_id).first()
+    #         if not existing_importer:
+    #             importer = Importers(name=element, codification_id=codification_id)
+    #             db.session.add(importer)
+    #             db.session.commit()
+    #             print(f"Added importer {element}")
+    #         else:
+    #             print(f"Importer {element} already exists for codification {codification_id}")
     # except Exception as e:
-    #     print(f"Error getting exporter data for code {code}: {e}")
-    #     data['exporters'] = {"error": f"Failed to get exporter data for code {code}"}
+    #     print(f"Error getting importer data for code {code}: {e}")
     
-    # # Classification Commerciale
+
+    # Exporters
+    try:
+        exporter_data = get_exporters(code)
+        for element in exporter_data:
+
+            existing_exporter = Exporters.query.filter_by(name=element,codification_id=codification_id).first()
+            if not existing_exporter:
+                exporter = Exporters(name =element,codification_id=codification_id)
+                db.session.add(exporter)
+                db.session.commit()
+    except Exception as e:
+        print(f"Error getting exporter data for code {code}: {e}")
+    
+    # Classification Commerciale
     # try:
     #     classification_commerciale_n_data = get_classification_commerciale('n', code)
-    #     data['classification_commerciale_n'] = classification_commerciale_n_data
     # except Exception as e:
     #     print(f"Error getting classification commerciale (n) data for code {code}: {e}")
-    #     data['classification_commerciale_n'] = {"error": f"Failed to get classification commerciale (n) data for code {code}"}
     
     # try:
     #     classification_commerciale_i_data = get_classification_commerciale('i', code)
-    #     data['classification_commerciale_i'] = classification_commerciale_i_data
     # except Exception as e:
     #     print(f"Error getting classification commerciale (i) data for code {code}: {e}")
-    #     data['classification_commerciale_i'] = {"error": f"Failed to get classification commerciale (i) data for code {code}"}
     
     # # Accord Convention
     # try:
     #     accord_convention_data = get_accord_convention(code)
-    #     data['accord_convention'] = accord_convention_data
+    #     for element in accord_convention_data:
+    #         print(element['Agreement'])
+    #         existing_accord_convention = AccordConvention.query.filter_by(country=element['country'], agreement=element['Agreement'], codification_id=codification_id).first()
+    #         if not existing_accord_convention:
+    #             accord_convention = AccordConvention(country=element['country'], agreement=element['Agreement'], di_percentage=element['DI Percentage'], tpi_percentage=element['TPI Percentage'], codification_id=codification_id)
+    #             db.session.add(accord_convention)
+    #             db.session.commit()
+    #             print(f"Added accord convention for {element['country']}")
+    #         else:
+    #             print(f"Accord convention for {element['country']} already exists")
     # except Exception as e:
     #     print(f"Error getting accord convention data for code {code}: {e}")
     #     data['accord_convention'] = {"error": f"Failed to get accord convention data for code {code}"}
     
-    # # Documents Required
+    # Documents Required
+    try:
+        documents_required_data = documents_required(code)
+        
+        print(documents_required_data)
+        for element in documents_required_data:
+        # Check if Document Required already exists
+            existing_document_required = DocumentRequired.query.filter_by(document_number=element['Document Number'], document_name=element['Document Name'], codification_id=codification_id).first()
+            if not existing_document_required:
+                document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'], libelle_d_extrait=element['libelle_d_extrait'], issuer=element['Issuer'], codification_id=codification_id)
+                db.session.add(document_required)
+                db.session.commit()
+                print(f"Added document required for {element['Document Name']}")
+            else:
+                print(f"Document required for {element['Document Name']} already exists")
+    except Exception as e:
+        print(f"Error getting documents required data for code {code}: {e}")
+    
+    # Import Duties
+    try:
+        element = import_duties(code)
+        print(codification_id)
+        # Check if Import Duty already exists
+        existing_import_duty = ImportDuty.query.filter_by(codification_id=codification_id).first()
+        if not existing_import_duty:
+            import_duty = ImportDuty(DI=element["-  Droit d'Importation* ( DI )"],TPI=element["- Taxe Parafiscale à l'Importation* ( TPI )"],TVA=element["- Taxe sur la Valeur Ajoutée à l'Import. ( TVA )"],codification_id=codification_id)
+            db.session.add(import_duty)
+            db.session.commit()
+            print(f"Added import duty")
+        else:
+            print(f"Import duty already exists")
+    except Exception as e:
+        print(f"Error getting import duties data for code {code}: {e}")
+    
+    # # AnnualImport
     # try:
-    #     documents_required_data = documents_required(code)
-    #     data['documents_required'] = documents_required_data
+    #     poids_imports=adil_tableaux("8", code)
+    #     val_imports=adil_tableaux("12", code)
+    #     for year, weight in poids_imports['Poids'].items():
+    #         existing_AnnualImport = AnnualImport.query.filter_by(year=year,codification_id=codification_id).first()
+    #         if not existing_AnnualImport :
+    #             value = val_imports['Valeur'].get(year)
+    #             annual_import = AnnualImport(year=year, weight=weight, value=value, codification_id=codification_id)
+    #             db.session.add(annual_import)
+    #             db.session.commit()
+    #             print(f"Saved import data for year {year}")  
+    #         else:
+    #             print(f"Import data already exists")
     # except Exception as e:
-    #     print(f"Error getting documents required data for code {code}: {e}")
-    #     data['documents_required'] = {"error": f"Failed to get documents required data for code {code}"}
-    
-    # # Import Duties
-    # try:
-    #     import_duties_data = import_duties(code)
-    #     data['import_duties'] = import_duties_data
-    # except Exception as e:
-    #     print(f"Error getting import duties data for code {code}: {e}")
-    #     data['import_duties'] = {"error": f"Failed to get import duties data for code {code}"}
-    
-    # # Adil Tableaux
-    # adil_tableaux_data = {}
-    # for n_value in n_page_names:
-    #     try:
-    #         adil_tableaux_data[n_page_names[n_value]] = adil_tableaux(n_value, code)
-    #     except Exception as e:
-    #         print(f"Error getting adil tableaux data for code {code}, n={n_value}: {e}")
-    #         adil_tableaux_data[n_page_names[n_value]] = {"error": f"Failed to get adil tableaux data for code {code}, n={n_value}"}
-    
-    # data['adil_tableaux'] = adil_tableaux_data
-    
-    # print(data['importers'])
-    return ("all good")
+    #     print(f"Error getting import data for code {code}: {e}")
 
+    # # AnnualExports
+    # try:
+    #     poids_exports=adil_tableaux("9", code)
+    #     val_exports=adil_tableaux("14", code)
+    #     for year, weight in poids_exports['Poids'].items():
+    #         existing_annual_export = AnnualExport.query.filter_by(year=year, codification_id=codification_id).first()
+    #         if not existing_annual_export:
+    #             value = val_exports['Valeur'].get(year)
+    #             annual_export = AnnualExport(year=year, weight=weight, value=value, codification_id=codification_id)
+    #             db.session.add(annual_export)
+    #             db.session.commit()
+    #             print(f"Saved export data for year {year}")
+    #         else:
+    #             print(f"export data already exists")
+    # except Exception as e:
+    #     print(f"Error saving export data: {e}")
+    
+    # # Fournisseurs
+    # try:
+    #     poids_fourn=adil_tableaux("10", code)
+    #     val_fourn=adil_tableaux("15", code)
+    #     for country,weight in poids_fourn['Poids'].items():
+    #         existing_Fournisseurs = Fournisseurs.query.filter_by(country=country, codification_id=codification_id).first()
+    #         if not existing_Fournisseurs:
+    #             value = val_fourn['Valeur'].get(country)
+    #             fournisseur = Fournisseurs(country=country, weight=weight, value=value, codification_id=codification_id)
+    #             db.session.add(fournisseur)
+    #             db.session.commit()
+    #             print(f"Saved fournisseur data for country {country}")
+    #         else:
+    #             print(f"fournisseur {country} data already exists")
+    # except Exception as e:
+    #     print(f"Error saving fournisseurs data: {e}")
+
+    # Clients
+    try:
+        poids_Clients=adil_tableaux("11", code)
+        val_Clients=adil_tableaux("16", code)
+        print(poids_Clients['Poids'])
+        for country,weight in poids_Clients['Poids'].items():
+            existing_Clients = Clients.query.filter_by(country=country, codification_id=codification_id).first()
+            if not existing_Clients:
+                value = val_Clients['Valeur'].get(country)
+                fournisseur = Clients(country=country, weight=weight, value=value, codification_id=codification_id)
+                db.session.add(fournisseur)
+                db.session.commit()
+                print(f"Saved Client data for country {country}")
+            else:
+                print(f"client {country} data already exists")
+    except Exception as e:
+        print(f"Error saving Clients data: {e}") 
+
+    try:
+        return ("all is good")
+    except Exception as e:
+        print(f"error: {e}") 
 
 

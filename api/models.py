@@ -2,18 +2,10 @@ from api.connection import db
 
 class codification(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    code = db.Column(db.String(255), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    category = db.Column(db.String(255), nullable=False)
-    importers = db.relationship('Importers', backref='codification', lazy=True)
-    exporters = db.relationship('Exporters', backref='codification', lazy=True)
-    accord_conventions = db.relationship('AccordConvention', backref='codification', lazy=True)
-    document_requireds = db.relationship('DocumentRequired', backref='codification', lazy=True)
-    import_duties = db.relationship('ImportDuty', backref='codification', lazy=True)
-    annual_imports = db.relationship('AnnualImport', backref='codification', lazy=True)
-    annual_export = db.relationship('AnnualExport', backref='codification', lazy=True)
-    clients = db.relationship('Clients', backref='codification', lazy=True)
-    fournisseurs = db.relationship('Fournisseurs', backref='codification', lazy=True)
+    code = db.Column(db.String(10), nullable=False, unique=True)
+    name = db.Column(db.String(1000))
+    category = db.Column(db.String(1000))
+    
 
 class Importers(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

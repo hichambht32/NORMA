@@ -29,7 +29,7 @@ class DocumentRequired(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     document_number = db.Column(db.String(255), nullable=False)
     document_name = db.Column(db.String(255), nullable=False)
-    libelle_d_extrait = db.Column(db.String(255), nullable=False)
+    libelle_d_extrait = db.Column(db.String(255))
     issuer = db.Column(db.String(255), nullable=False)
     codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
 

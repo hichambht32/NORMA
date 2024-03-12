@@ -31,20 +31,34 @@ def get_importers(code):
     if response.status_code == 200:
         # Parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Find all table rows (tr) containing importer names
-        importer_rows = soup.find_all('td', class_='Style7')
-        print("Number of importer rows found:", len(importer_rows))
-        
-        # Extract the importer names
-        importer_names = [row.get_text(strip=True) for row in importer_rows]
-        print("Importer names:", importer_names)
+        all_importer_names = []
+        # Check if there are multiple pages
+        page_info = soup.find_all('span', class_='Style14')[-1]
+        if page_info:
+            total_pages = int(page_info.find_all('b')[1].get_text())
+            # Enumerate through pages and collect importer names
+            all_importer_names = []
+            for page in range(1, total_pages + 1):
+                page_url = f"https://www.douane.gov.ma/adil/oper_ii.asp?Page={page}&Recherche={code}"
+                print("Processing page:", page)
+                page_response = session.get(page_url, headers=headers)
+                
+                if page_response.status_code == 200:
+                    page_soup = BeautifulSoup(page_response.text, 'html.parser')
+                    importer_rows = page_soup.find_all('td', class_='Style7')
+                    page_importer_names = [row.get_text(strip=True) for row in importer_rows]
+                    all_importer_names.extend(page_importer_names)
+                    print("Importer names on page", page, ":", page_importer_names)
 
         # Construct the response dictionary
-        if attention(soup):
-            raise Exception("No importers found as of date")
+        if not all_importer_names:
+            return {
+                "importers": "there is no importer data as of date"
+            }
         else:
-            return importer_names
+            return all_importer_names
+
+        
     else:
         raise Exception("Failed to retrieve the webpage")
 
@@ -69,18 +83,37 @@ def get_exporters(code):
     if response.status_code == 200:
         # Parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
+        all_exporters_names = []
+        # Check if there are multiple pages
+        page_info = soup.find_all('span', class_='Style14')[-1]
+        if page_info:
+            total_pages = int(page_info.find_all('b')[1].get_text())
+            
+            # Enumerate through pages and collect importer names
+            all_exporters_names = []
+            for page in range(1, total_pages + 1):
+                page_url = f"https://www.douane.gov.ma/adil/oper_EE.asp?Page={page}&Recherche={code}"
+                page_response = session.get(page_url, headers=headers)
+                
+                if page_response.status_code == 200:
+                    page_soup = BeautifulSoup(page_response.text, 'html.parser')
+                    # Find all table rows (tr) containing importer names
+                    exporter_rows = page_soup.find_all('span', class_='Style7')
         
-        # Find all table rows (tr) containing importer names
-        exporter_rows = soup.find_all('span', class_='Style7')
-        print(exporter_rows)
-        # Extract the importer names
-        exporter_names = [row.get_text(strip=True) for row in exporter_rows]
+                    # Extract the importer names
+                    exporter_names = [row.get_text(strip=True) for row in exporter_rows]
+                    all_exporters_names.extend(exporter_names)
+                    print("exporters names on page", page, ":", exporter_names)
 
         # Construct the response dictionary
-        if attention(soup):
-            raise Exception("No exporters found as of date")
+        if not all_exporters_names:
+            return {
+                "exporters": "there is no importer data as of date"
+            }
         else:
-            return exporter_names
+            return all_exporters_names
+
+        
             
     else:
         print(f"Request failed for code: {code}")
@@ -434,20 +467,20 @@ def get_and_save_data(code):
     
     codification_id = codification.query.filter_by(code=code).first().id
 
-    # # Importers
-    # try:
-    #     importer_data = get_importers(code)
-    #     for element in importer_data:
-    #         existing_importer = Importers.query.filter_by(name=element, codification_id=codification_id).first()
-    #         if not existing_importer:
-    #             importer = Importers(name=element, codification_id=codification_id)
-    #             db.session.add(importer)
-    #             db.session.commit()
-    #             print(f"Added importer {element}")
-    #         else:
-    #             print(f"Importer {element} already exists for codification {codification_id}")
-    # except Exception as e:
-    #     print(f"Error getting importer data for code {code}: {e}")
+    # Importers
+    try:
+        importer_data = get_importers(code)
+        for element in importer_data:
+            existing_importer = Importers.query.filter_by(name=element, codification_id=codification_id).first()
+            if not existing_importer:
+                importer = Importers(name=element, codification_id=codification_id, code=code)
+                db.session.add(importer)
+                db.session.commit()
+                print(f"Added importer {element}")
+            else:
+                print(f"Importer {element} already exists for codification {codification_id}")
+    except Exception as e:
+        print(f"Error getting importer data for code {code}: {e}")
     
 
     # # Exporters
@@ -457,7 +490,7 @@ def get_and_save_data(code):
     #         existing_exporter = Exporters.query.filter_by(name=element,codification_id=codification_id).first()
     #         if not existing_exporter:
     #             print(f"added new exporter:{element}")
-    #             exporter = Exporters(name =element,codification_id=codification_id)
+    #             exporter = Exporters(name =element,codification_id=codification_id, code=code)
     #             db.session.add(exporter)
     #             db.session.commit()
     # except Exception as e:
@@ -475,20 +508,20 @@ def get_and_save_data(code):
     #     print(f"Error getting classification commerciale (i) data for code {code}: {e}")
     
     # Accord Convention
-    try:
-        accord_convention_data = get_accord_convention(code)
-        for element in accord_convention_data:
-            print(element['Agreement'])
-            existing_accord_convention = AccordConvention.query.filter_by(country=element['country'], agreement=element['Agreement'], codification_id=codification_id).first()
-            if not existing_accord_convention:
-                accord_convention = AccordConvention(country=element['country'], agreement=element['Agreement'], di_percentage=element['DI Percentage'], tpi_percentage=element['TPI Percentage'], codification_id=codification_id)
-                db.session.add(accord_convention)
-                db.session.commit()
-                print(f"Added accord convention for {element['country']}")
-            else:
-                print(f"Accord convention for {element['country']} already exists")
-    except Exception as e:
-        print(f"Error getting accord convention data for code {code}: {e}")
+    # try:
+    #     accord_convention_data = get_accord_convention(code)
+    #     for element in accord_convention_data:
+    #         print(element['Agreement'])
+    #         existing_accord_convention = AccordConvention.query.filter_by(country=element['country'], agreement=element['Agreement'], codification_id=codification_id).first()
+    #         if not existing_accord_convention:
+    #             accord_convention = AccordConvention(country=element['country'], agreement=element['Agreement'], di_percentage=element['DI Percentage'], tpi_percentage=element['TPI Percentage'], codification_id=codification_id, code=code)
+    #             db.session.add(accord_convention)
+    #             db.session.commit()
+    #             print(f"Added accord convention for {element['country']}")
+    #         else:
+    #             print(f"Accord convention for {element['country']} already exists")
+    # except Exception as e:
+    #     print(f"Error getting accord convention data for code {code}: {e}")
     
     # Documents Required
     # try:
@@ -501,9 +534,9 @@ def get_and_save_data(code):
     #                 print("we're inserting")
     #                 print(len(element))
     #                 if len(documents_required_data)==4:
-    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'], libelle_d_extrait=element['libelle_d_extrait'], issuer=element['Issuer'], codification_id=codification_id)
+    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'], libelle_d_extrait=element['libelle_d_extrait'], issuer=element['Issuer'], codification_id=codification_id, code=code)
     #                 else:
-    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'],issuer=element['Issuer'], codification_id=codification_id)
+    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'],issuer=element['Issuer'], codification_id=codification_id, code=code)
     #                 db.session.add(document_required)
     #                 db.session.commit()
     #                 print(f"Added document required for {code} : {element['Document Name']}")
@@ -518,7 +551,7 @@ def get_and_save_data(code):
     #     # Check if Import Duty already exists
     #     existing_import_duty = ImportDuty.query.filter_by(codification_id=codification_id).first()
     #     if not existing_import_duty:
-    #         import_duty = ImportDuty(DI=element["-  Droit d'Importation* ( DI )"],TPI=element["- Taxe Parafiscale à l'Importation* ( TPI )"],TVA=element["- Taxe sur la Valeur Ajoutée à l'Import. ( TVA )"],codification_id=codification_id)
+    #         import_duty = ImportDuty(DI=element["-  Droit d'Importation* ( DI )"],TPI=element["- Taxe Parafiscale à l'Importation* ( TPI )"],TVA=element["- Taxe sur la Valeur Ajoutée à l'Import. ( TVA )"],codification_id=codification_id, code=code)
     #         db.session.add(import_duty)
     #         db.session.commit()
     #         print(f"Added import duty")
@@ -535,7 +568,7 @@ def get_and_save_data(code):
     #         existing_AnnualImport = AnnualImport.query.filter_by(year=year,codification_id=codification_id).first()
     #         if not existing_AnnualImport :
     #             value = val_imports['Valeur'].get(year)
-    #             annual_import = AnnualImport(year=year, weight=weight, value=value, codification_id=codification_id)
+    #             annual_import = AnnualImport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
     #             db.session.add(annual_import)
     #             db.session.commit()
     #             print(f"Saved import data for year {year}")  
@@ -552,7 +585,7 @@ def get_and_save_data(code):
     #         existing_annual_export = AnnualExport.query.filter_by(year=year, codification_id=codification_id).first()
     #         if not existing_annual_export:
     #             value = val_exports['Valeur'].get(year)
-    #             annual_export = AnnualExport(year=year, weight=weight, value=value, codification_id=codification_id)
+    #             annual_export = AnnualExport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
     #             db.session.add(annual_export)
     #             db.session.commit()
     #             print(f"Saved export data for year {year}")
@@ -569,7 +602,7 @@ def get_and_save_data(code):
     #         existing_Fournisseurs = Fournisseurs.query.filter_by(country=country, codification_id=codification_id).first()
     #         if not existing_Fournisseurs:
     #             value = val_fourn['Valeur'].get(country)
-    #             fournisseur = Fournisseurs(country=country, weight=weight, value=value, codification_id=codification_id)
+    #             fournisseur = Fournisseurs(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
     #             db.session.add(fournisseur)
     #             db.session.commit()
     #             print(f"Saved fournisseur data for country {country}")
@@ -586,7 +619,7 @@ def get_and_save_data(code):
     #         existing_Clients = Clients.query.filter_by(country=country, codification_id=codification_id).first()
     #         if not existing_Clients:
     #             value = val_Clients['Valeur'].get(country)
-    #             fournisseur = Clients(country=country, weight=weight, value=value, codification_id=codification_id)
+    #             fournisseur = Clients(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
     #             db.session.add(fournisseur)
     #             db.session.commit()
     #             print(f"Saved Client data for country {country}")

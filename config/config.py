@@ -1,3 +1,3 @@
-SQLALCHEMY_DATABASE_URI = 'mysql://root:@localhost/Adildb'
+SQLALCHEMY_DATABASE_URI = 'mysql://root:@192.168.2.134/Adildb'
 SECRET_KEY = 'Top_Negoce_Adil'
 SQLALCHEMY_TRACK_MODIFICATIONS = False

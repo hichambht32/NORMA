@@ -483,18 +483,18 @@ def get_and_save_data(code):
         print(f"Error getting importer data for code {code}: {e}")
     
 
-    # # Exporters
-    # try:
-    #     exporter_data = get_exporters(code)
-    #     for element in exporter_data:
-    #         existing_exporter = Exporters.query.filter_by(name=element,codification_id=codification_id).first()
-    #         if not existing_exporter:
-    #             print(f"added new exporter:{element}")
-    #             exporter = Exporters(name =element,codification_id=codification_id, code=code)
-    #             db.session.add(exporter)
-    #             db.session.commit()
-    # except Exception as e:
-    #     print(f"Error getting exporter data for code {code}: {e}")
+    # Exporters
+    try:
+        exporter_data = get_exporters(code)
+        for element in exporter_data:
+            existing_exporter = Exporters.query.filter_by(name=element,codification_id=codification_id).first()
+            if not existing_exporter:
+                print(f"added new exporter:{element}")
+                exporter = Exporters(name =element,codification_id=codification_id, code=code)
+                db.session.add(exporter)
+                db.session.commit()
+    except Exception as e:
+        print(f"Error getting exporter data for code {code}: {e}")
     
     # Classification Commerciale
     # try:
@@ -508,125 +508,125 @@ def get_and_save_data(code):
     #     print(f"Error getting classification commerciale (i) data for code {code}: {e}")
     
     # Accord Convention
-    # try:
-    #     accord_convention_data = get_accord_convention(code)
-    #     for element in accord_convention_data:
-    #         print(element['Agreement'])
-    #         existing_accord_convention = AccordConvention.query.filter_by(country=element['country'], agreement=element['Agreement'], codification_id=codification_id).first()
-    #         if not existing_accord_convention:
-    #             accord_convention = AccordConvention(country=element['country'], agreement=element['Agreement'], di_percentage=element['DI Percentage'], tpi_percentage=element['TPI Percentage'], codification_id=codification_id, code=code)
-    #             db.session.add(accord_convention)
-    #             db.session.commit()
-    #             print(f"Added accord convention for {element['country']}")
-    #         else:
-    #             print(f"Accord convention for {element['country']} already exists")
-    # except Exception as e:
-    #     print(f"Error getting accord convention data for code {code}: {e}")
+    try:
+        accord_convention_data = get_accord_convention(code)
+        for element in accord_convention_data:
+            print(element['Agreement'])
+            existing_accord_convention = AccordConvention.query.filter_by(country=element['country'], agreement=element['Agreement'], codification_id=codification_id).first()
+            if not existing_accord_convention:
+                accord_convention = AccordConvention(country=element['country'], agreement=element['Agreement'], di_percentage=element['DI Percentage'], tpi_percentage=element['TPI Percentage'], codification_id=codification_id, code=code)
+                db.session.add(accord_convention)
+                db.session.commit()
+                print(f"Added accord convention for {element['country']}")
+            else:
+                print(f"Accord convention for {element['country']} already exists")
+    except Exception as e:
+        print(f"Error getting accord convention data for code {code}: {e}")
     
     # Documents Required
-    # try:
-    #     documents_required_data = documents_required(code)
-    #     print(documents_required_data)
-    #     for element in documents_required_data:
-    #     # Check if Document Required already exists
-    #         existing_document_required = DocumentRequired.query.filter_by(document_number=element['Document Number'], document_name=element['Document Name'], codification_id=codification_id).first()
-    #         if not existing_document_required:
-    #                 print("we're inserting")
-    #                 print(len(element))
-    #                 if len(documents_required_data)==4:
-    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'], libelle_d_extrait=element['libelle_d_extrait'], issuer=element['Issuer'], codification_id=codification_id, code=code)
-    #                 else:
-    #                     document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'],issuer=element['Issuer'], codification_id=codification_id, code=code)
-    #                 db.session.add(document_required)
-    #                 db.session.commit()
-    #                 print(f"Added document required for {code} : {element['Document Name']}")
-    #         else:
-    #             print(f"Document required for {element['Document Name']} already exists")
-    # except Exception as e:
-    #     print(f"Error getting documents required data for code {code}: {e}")
+    try:
+        documents_required_data = documents_required(code)
+        print(documents_required_data)
+        for element in documents_required_data:
+        # Check if Document Required already exists
+            existing_document_required = DocumentRequired.query.filter_by(document_number=element['Document Number'], document_name=element['Document Name'], codification_id=codification_id).first()
+            if not existing_document_required:
+                    print("we're inserting")
+                    print(len(element))
+                    if len(documents_required_data)==4:
+                        document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'], libelle_d_extrait=element['libelle_d_extrait'], issuer=element['Issuer'], codification_id=codification_id, code=code)
+                    else:
+                        document_required = DocumentRequired(document_number=element['Document Number'], document_name=element['Document Name'],issuer=element['Issuer'], codification_id=codification_id, code=code)
+                    db.session.add(document_required)
+                    db.session.commit()
+                    print(f"Added document required for {code} : {element['Document Name']}")
+            else:
+                print(f"Document required for {element['Document Name']} already exists")
+    except Exception as e:
+        print(f"Error getting documents required data for code {code}: {e}")
      
-    # # Import Duties
-    # try:
-    #     element = import_duties(code)
-    #     # Check if Import Duty already exists
-    #     existing_import_duty = ImportDuty.query.filter_by(codification_id=codification_id).first()
-    #     if not existing_import_duty:
-    #         import_duty = ImportDuty(DI=element["-  Droit d'Importation* ( DI )"],TPI=element["- Taxe Parafiscale à l'Importation* ( TPI )"],TVA=element["- Taxe sur la Valeur Ajoutée à l'Import. ( TVA )"],codification_id=codification_id, code=code)
-    #         db.session.add(import_duty)
-    #         db.session.commit()
-    #         print(f"Added import duty")
-    #     else: 
-    #         print(f"Import duty already exists")
-    # except Exception as e:
-    #     print(f"Error getting import duties data for code {code}: {e}")
+    # Import Duties
+    try:
+        element = import_duties(code)
+        # Check if Import Duty already exists
+        existing_import_duty = ImportDuty.query.filter_by(codification_id=codification_id).first()
+        if not existing_import_duty:
+            import_duty = ImportDuty(DI=element["-  Droit d'Importation* ( DI )"],TPI=element["- Taxe Parafiscale à l'Importation* ( TPI )"],TVA=element["- Taxe sur la Valeur Ajoutée à l'Import. ( TVA )"],codification_id=codification_id, code=code)
+            db.session.add(import_duty)
+            db.session.commit()
+            print(f"Added import duty")
+        else: 
+            print(f"Import duty already exists")
+    except Exception as e:
+        print(f"Error getting import duties data for code {code}: {e}")
     
-    # # AnnualImport
-    # try:
-    #     poids_imports=adil_tableaux("8", code)
-    #     val_imports=adil_tableaux("12", code)
-    #     for year, weight in poids_imports['Poids'].items():
-    #         existing_AnnualImport = AnnualImport.query.filter_by(year=year,codification_id=codification_id).first()
-    #         if not existing_AnnualImport :
-    #             value = val_imports['Valeur'].get(year)
-    #             annual_import = AnnualImport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
-    #             db.session.add(annual_import)
-    #             db.session.commit()
-    #             print(f"Saved import data for year {year}")  
-    #         else:
-    #             print(f"Import data already exists")
-    # except Exception as e:
-    #     print(f"Error getting import data for code {code}: {e}")
+    # AnnualImport
+    try:
+        poids_imports=adil_tableaux("8", code)
+        val_imports=adil_tableaux("12", code)
+        for year, weight in poids_imports['Poids'].items():
+            existing_AnnualImport = AnnualImport.query.filter_by(year=year,codification_id=codification_id).first()
+            if not existing_AnnualImport :
+                value = val_imports['Valeur'].get(year)
+                annual_import = AnnualImport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
+                db.session.add(annual_import)
+                db.session.commit()
+                print(f"Saved import data for year {year}")  
+            else:
+                print(f"Import data already exists")
+    except Exception as e:
+        print(f"Error getting import data for code {code}: {e}")
 
     # AnnualExports
-    # try:
-    #     poids_exports=adil_tableaux("9", code)
-    #     val_exports=adil_tableaux("14", code)
-    #     for year, weight in poids_exports['Poids'].items():
-    #         existing_annual_export = AnnualExport.query.filter_by(year=year, codification_id=codification_id).first()
-    #         if not existing_annual_export:
-    #             value = val_exports['Valeur'].get(year)
-    #             annual_export = AnnualExport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
-    #             db.session.add(annual_export)
-    #             db.session.commit()
-    #             print(f"Saved export data for year {year}")
-    #         else:
-    #             print(f"export data already exists")
-    # except Exception as e:
-    #     print(f"Error saving export data: {e}")
+    try:
+        poids_exports=adil_tableaux("9", code)
+        val_exports=adil_tableaux("14", code)
+        for year, weight in poids_exports['Poids'].items():
+            existing_annual_export = AnnualExport.query.filter_by(year=year, codification_id=codification_id).first()
+            if not existing_annual_export:
+                value = val_exports['Valeur'].get(year)
+                annual_export = AnnualExport(year=year, weight=weight, value=value, codification_id=codification_id, code=code)
+                db.session.add(annual_export)
+                db.session.commit()
+                print(f"Saved export data for year {year}")
+            else:
+                print(f"export data already exists")
+    except Exception as e:
+        print(f"Error saving export data: {e}")
     
     # Fournisseurs
-    # try:
-    #     poids_fourn=adil_tableaux("10", code)
-    #     val_fourn=adil_tableaux("15", code)
-    #     for country,weight in poids_fourn['Poids'].items():
-    #         existing_Fournisseurs = Fournisseurs.query.filter_by(country=country, codification_id=codification_id).first()
-    #         if not existing_Fournisseurs:
-    #             value = val_fourn['Valeur'].get(country)
-    #             fournisseur = Fournisseurs(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
-    #             db.session.add(fournisseur)
-    #             db.session.commit()
-    #             print(f"Saved fournisseur data for country {country}")
-    #         else:
-    #             print(f"fournisseur {country} data already exists")
-    # except Exception as e:
-    #     print(f"Error saving fournisseurs data: {e}")
+    try:
+        poids_fourn=adil_tableaux("10", code)
+        val_fourn=adil_tableaux("15", code)
+        for country,weight in poids_fourn['Poids'].items():
+            existing_Fournisseurs = Fournisseurs.query.filter_by(country=country, codification_id=codification_id).first()
+            if not existing_Fournisseurs:
+                value = val_fourn['Valeur'].get(country)
+                fournisseur = Fournisseurs(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
+                db.session.add(fournisseur)
+                db.session.commit()
+                print(f"Saved fournisseur data for country {country}")
+            else:
+                print(f"fournisseur {country} data already exists")
+    except Exception as e:
+        print(f"Error saving fournisseurs data: {e}")
 
-    # # Clients
-    # try:
-    #     poids_Clients=adil_tableaux("11", code)
-    #     val_Clients=adil_tableaux("16", code)
-    #     for country,weight in poids_Clients['Poids'].items():
-    #         existing_Clients = Clients.query.filter_by(country=country, codification_id=codification_id).first()
-    #         if not existing_Clients:
-    #             value = val_Clients['Valeur'].get(country)
-    #             fournisseur = Clients(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
-    #             db.session.add(fournisseur)
-    #             db.session.commit()
-    #             print(f"Saved Client data for country {country}")
-    #         else:
-    #             print(f"client {country} data already exists")
-    # except Exception as e:
-    #     print(f"Error saving Clients data: {e}") 
+    # Clients
+    try:
+        poids_Clients=adil_tableaux("11", code)
+        val_Clients=adil_tableaux("16", code)
+        for country,weight in poids_Clients['Poids'].items():
+            existing_Clients = Clients.query.filter_by(country=country, codification_id=codification_id).first()
+            if not existing_Clients:
+                value = val_Clients['Valeur'].get(country)
+                fournisseur = Clients(country=country, weight=weight, value=value, codification_id=codification_id, code=code)
+                db.session.add(fournisseur)
+                db.session.commit()
+                print(f"Saved Client data for country {country}")
+            else:
+                print(f"client {country} data already exists")
+    except Exception as e:
+        print(f"Error saving Clients data: {e}") 
  
     try:
         return ("all is good")

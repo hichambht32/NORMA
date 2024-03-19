@@ -10,13 +10,11 @@ class codification(db.Model):
 class Importers(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class Exporters(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class AccordConvention(db.Model):
@@ -25,7 +23,6 @@ class AccordConvention(db.Model):
     agreement = db.Column(db.String(255), nullable=False)
     di_percentage = db.Column(db.String(255), nullable=False)
     tpi_percentage = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class DocumentRequired(db.Model):
@@ -34,7 +31,6 @@ class DocumentRequired(db.Model):
     document_name = db.Column(db.String(255), nullable=False)
     libelle_d_extrait = db.Column(db.String(255))
     issuer = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class ImportDuty(db.Model):
@@ -42,7 +38,6 @@ class ImportDuty(db.Model):
     DI = db.Column(db.String(255), nullable=False)
     TPI = db.Column(db.String(255), nullable=False)
     TVA = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class AnnualImport(db.Model):
@@ -50,7 +45,6 @@ class AnnualImport(db.Model):
     year = db.Column(db.String(255), nullable=False)
     weight = db.Column(db.String(255), nullable=False)
     value = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class AnnualExport(db.Model):
@@ -58,7 +52,6 @@ class AnnualExport(db.Model):
     year = db.Column(db.String(255), nullable=False)
     weight = db.Column(db.String(255), nullable=False)
     value = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class Clients(db.Model):
@@ -66,7 +59,6 @@ class Clients(db.Model):
     country = db.Column(db.String(255), nullable=False)
     value = db.Column(db.String(255), nullable=False) 
     weight = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
 class Fournisseurs(db.Model):
@@ -74,6 +66,5 @@ class Fournisseurs(db.Model):
     country = db.Column(db.String(255), nullable=False)
     value = db.Column(db.String(255), nullable=False) 
     weight = db.Column(db.String(255), nullable=False)
-    codification_id = db.Column(db.Integer, db.ForeignKey('codification.id'), nullable=False)
     code = db.Column(db.String(10), db.ForeignKey('codification.code'), nullable=False)
 
